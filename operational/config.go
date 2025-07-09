@@ -1,3 +1,4 @@
+// Package operational provides HTTP endpoints for health checks, metrics, and service info.
 package operational
 
 import (
