@@ -1,3 +1,4 @@
+// Package metadata provides service information management for consistent labeling.
 package metadata
 
 import (

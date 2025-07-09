@@ -1,5 +1,9 @@
 # corrupt-o11y-go
 
+[![CI](https://github.com/corruptmane/corrupt-o11y-go/actions/workflows/ci.yml/badge.svg)](https://github.com/corruptmane/corrupt-o11y-go/actions/workflows/ci.yml)
+[![Go Reference](https://pkg.go.dev/badge/github.com/corruptmane/corrupt-o11y-go.svg)](https://pkg.go.dev/github.com/corruptmane/corrupt-o11y-go)
+[![Go Report Card](https://goreportcard.com/badge/github.com/corruptmane/corrupt-o11y-go)](https://goreportcard.com/report/github.com/corruptmane/corrupt-o11y-go)
+
 A comprehensive observability library for Go applications providing structured logging, metrics collection, distributed tracing, and operational endpoints.
 
 ## Features
@@ -30,30 +34,30 @@ import (
 func main() {
     // Initialize service metadata
     serviceInfo := metadata.FromEnv()
-    
+
     // Configure logging
     logConfig := logging.FromEnv()
     logging.ConfigureLogging(logConfig)
     logger := logging.GetLogger("main")
-    
+
     // Setup metrics
     metricsCollector := metrics.NewMetricsCollector()
     metricsCollector.CreateServiceInfoMetricFromServiceInfo(serviceInfo)
-    
+
     // Setup tracing
     tracingConfig, _ := tracing.FromEnv()
     tracing.ConfigureTracing(context.Background(), tracingConfig, serviceInfo.Name, serviceInfo.Version)
-    
+
     // Setup operational server
     opConfig := operational.FromEnv()
     status := operational.NewStatus()
     status.SetReady(true)
-    
+
     opServer := operational.NewOperationalServer(opConfig, serviceInfo, status, metricsCollector)
     opServer.Start(context.Background())
-    
+
     logger.Info("Service started", slog.String("url", opServer.ServerURL()))
-    
+
     // Your application logic here...
 }
 ```
@@ -73,6 +77,20 @@ All modules support environment-based configuration:
 - `LOG_LEVEL` - Log level: DEBUG, INFO, WARN, ERROR (default: "INFO")
 - `LOG_AS_JSON` - Output as JSON: true/false (default: "false")
 - `LOG_TRACING` - Include tracing info: true/false (default: "false")
+
+**Note**: To include tracing information in logs, you must use the context-aware logging methods (`InfoContext`, `ErrorContext`, etc.) and pass the span context:
+
+```go
+tracer := tracing.GetTracer("my-service")
+spanCtx, span := tracer.Start(context.Background(), "operation")
+defer span.End()
+
+// This will include span information in the log
+logger.InfoContext(spanCtx, "Operation completed")
+
+// This will NOT include span information
+logger.Info("Operation completed")
+```
 
 ### Tracing
 - `TRACING_EXPORTER_TYPE` - Exporter type: stdout, http, grpc (default: "stdout")
@@ -100,7 +118,7 @@ go get github.com/corruptmane/corrupt-o11y-go
 ## Development
 
 ### Requirements
-- Go 1.21+
+- Go 1.23+
 - [just](https://github.com/casey/just) (task runner)
 - [golangci-lint](https://golangci-lint.run/) (linting)
 

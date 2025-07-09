@@ -1,3 +1,4 @@
+// Package tracing provides OpenTelemetry distributed tracing configuration and setup.
 package tracing
 
 import (

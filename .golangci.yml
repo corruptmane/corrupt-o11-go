@@ -1,44 +1,68 @@
+version: "2"
+
 run:
-  timeout: 5m
-  tests: true
   modules-download-mode: readonly
+  issues-exit-code: 1
+  tests: true
+  timeout: 5m
+
+output:
+  formats:
+    text:
+      path: stdout
+      print-linter-name: true
+      print-issued-lines: true
+      colors: true
 
 linters:
-  disable-all: true
+  default: none
   enable:
-    # Essential linters
     - errcheck
-    - gosimple
     - govet
     - ineffassign
-    - staticcheck
-    - typecheck
-    - unused
-
-    # Code quality
-    - gofmt
-    - goimports
-    - goconst
     - misspell
+    - staticcheck
+    - unused
+    - goconst
     - unconvert
     - unparam
+    - gocyclo
+  exclusions:
+    rules:
+      - path: _test\.go
+        linters:
+          - errcheck
+          - unparam
+  settings:
+    goconst:
+      min-len: 3
+      min-occurrences: 3
+    gocyclo:
+      min-complexity: 15
+    govet:
+      settings:
+        printf:
+          funcs:
+            - (github.com/golangci/golangci-lint/v2/pkg/logutils.Log).Infof
+            - (github.com/golangci/golangci-lint/v2/pkg/logutils.Log).Warnf
+            - (github.com/golangci/golangci-lint/v2/pkg/logutils.Log).Errorf
+            - (github.com/golangci/golangci-lint/v2/pkg/logutils.Log).Fatalf
+    staticcheck:
+      checks:
+        - all
 
-linters-settings:
-  goconst:
-    min-len: 3
-    min-occurrences: 3
-
-  misspell:
-    locale: US
+formatters:
+  enable:
+    - gofmt
+    - goimports
+  exclusions:
+    warn-unused: false
+    generated: lax
+  settings:
+    gofmt:
+      simplify: true
 
 issues:
-  exclude-rules:
-    - path: _test\.go
-      linters:
-        - errcheck
-        - gosec
-        - unparam
-
-  exclude-use-default: false
   max-issues-per-linter: 0
   max-same-issues: 0
+  fix: true

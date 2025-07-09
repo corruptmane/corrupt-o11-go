@@ -42,10 +42,24 @@ type tracingHandler struct {
 
 func (h *tracingHandler) Handle(ctx context.Context, record slog.Record) error {
 	span := trace.SpanFromContext(ctx)
-	if span.IsRecording() {
-		spanContext := span.SpanContext()
-		record.Add("span_id", spanContext.SpanID().String())
-		record.Add("trace_id", spanContext.TraceID().String())
+	spanContext := span.SpanContext()
+
+	// Add tracing information if we have a valid span context
+	if spanContext.IsValid() {
+		spanInfo := map[string]any{
+			"span_id":  spanContext.SpanID().String(),
+			"trace_id": spanContext.TraceID().String(),
+		}
+		record.Add("span", spanInfo)
 	}
+
 	return h.Handler.Handle(ctx, record)
+}
+
+func (h *tracingHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
+	return &tracingHandler{Handler: h.Handler.WithAttrs(attrs)}
+}
+
+func (h *tracingHandler) WithGroup(name string) slog.Handler {
+	return &tracingHandler{Handler: h.Handler.WithGroup(name)}
 }
