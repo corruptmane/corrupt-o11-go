@@ -12,20 +12,31 @@ import (
 
 // MetricsCollector provides a centralized registry for Prometheus metrics
 type MetricsCollector struct {
+	config   MetricsConfig
 	registry *prometheus.Registry
 	metrics  map[string]prometheus.Collector
 	mu       sync.RWMutex
 }
 
-// NewMetricsCollector creates a new metrics collector with built-in metrics
+// NewMetricsCollector creates a new metrics collector with default configuration
 func NewMetricsCollector() *MetricsCollector {
+	return NewMetricsCollectorWithConfig(FromEnv())
+}
+
+// NewMetricsCollectorWithConfig creates a new metrics collector with the given configuration
+func NewMetricsCollectorWithConfig(config MetricsConfig) *MetricsCollector {
 	registry := prometheus.NewRegistry()
 
-	// Register built-in collectors
-	registry.MustRegister(collectors.NewGoCollector())
-	registry.MustRegister(collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}))
+	// Register built-in collectors based on configuration
+	if config.EnableGoCollector {
+		registry.MustRegister(collectors.NewGoCollector())
+	}
+	if config.EnableProcessCollector {
+		registry.MustRegister(collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}))
+	}
 
 	return &MetricsCollector{
+		config:   config,
 		registry: registry,
 		metrics:  make(map[string]prometheus.Collector),
 	}
@@ -71,6 +82,15 @@ func (mc *MetricsCollector) Clear() {
 		mc.registry.Unregister(collector)
 		delete(mc.metrics, name)
 	}
+}
+
+// IsRegistered checks if a metric with the given name is registered
+func (mc *MetricsCollector) IsRegistered(name string) bool {
+	mc.mu.RLock()
+	defer mc.mu.RUnlock()
+
+	_, exists := mc.metrics[name]
+	return exists
 }
 
 // CreateServiceInfoMetric creates a service info metric using this collector's registry
@@ -142,4 +162,71 @@ func CreateServiceInfoMetricFromServiceInfo(serviceInfo metadata.ServiceInfo) *p
 		&serviceInfo.CommitSHA,
 		&serviceInfo.BuildTime,
 	)
+}
+
+// applyPrefix applies the configured metric prefix to the opts Name field
+func (mc *MetricsCollector) applyPrefix(name *string) {
+	if mc.config.MetricPrefix != "" {
+		*name = mc.config.MetricPrefix + *name
+	}
+}
+
+// CreateCounterVec creates a CounterVec metric and registers it with this collector
+func (mc *MetricsCollector) CreateCounterVec(opts prometheus.CounterOpts, labelNames []string) *prometheus.CounterVec {
+	originalName := opts.Name
+	mc.applyPrefix(&opts.Name)
+
+	counter := prometheus.NewCounterVec(opts, labelNames)
+	_ = mc.Register(originalName, counter)
+	return counter
+}
+
+// CreateGaugeVec creates a GaugeVec metric and registers it with this collector
+func (mc *MetricsCollector) CreateGaugeVec(opts prometheus.GaugeOpts, labelNames []string) *prometheus.GaugeVec {
+	originalName := opts.Name
+	mc.applyPrefix(&opts.Name)
+
+	gauge := prometheus.NewGaugeVec(opts, labelNames)
+	_ = mc.Register(originalName, gauge)
+	return gauge
+}
+
+// CreateHistogramVec creates a HistogramVec metric and registers it with this collector
+func (mc *MetricsCollector) CreateHistogramVec(opts prometheus.HistogramOpts, labelNames []string) *prometheus.HistogramVec {
+	originalName := opts.Name
+	mc.applyPrefix(&opts.Name)
+
+	histogram := prometheus.NewHistogramVec(opts, labelNames)
+	_ = mc.Register(originalName, histogram)
+	return histogram
+}
+
+// CreateSummaryVec creates a SummaryVec metric and registers it with this collector
+func (mc *MetricsCollector) CreateSummaryVec(opts prometheus.SummaryOpts, labelNames []string) *prometheus.SummaryVec {
+	originalName := opts.Name
+	mc.applyPrefix(&opts.Name)
+
+	summary := prometheus.NewSummaryVec(opts, labelNames)
+	_ = mc.Register(originalName, summary)
+	return summary
+}
+
+// CreateCounterFunc creates a CounterFunc metric and registers it with this collector
+func (mc *MetricsCollector) CreateCounterFunc(opts prometheus.CounterOpts, countFunc func() float64) prometheus.CounterFunc {
+	originalName := opts.Name
+	mc.applyPrefix(&opts.Name)
+
+	counter := prometheus.NewCounterFunc(opts, countFunc)
+	_ = mc.Register(originalName, counter)
+	return counter
+}
+
+// CreateGaugeFunc creates a GaugeFunc metric and registers it with this collector
+func (mc *MetricsCollector) CreateGaugeFunc(opts prometheus.GaugeOpts, gaugeFunc func() float64) prometheus.GaugeFunc {
+	originalName := opts.Name
+	mc.applyPrefix(&opts.Name)
+
+	gauge := prometheus.NewGaugeFunc(opts, gaugeFunc)
+	_ = mc.Register(originalName, gauge)
+	return gauge
 }

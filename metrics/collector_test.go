@@ -105,3 +105,87 @@ func TestCreateServiceInfoMetric(t *testing.T) {
 		t.Error("Expected CreateServiceInfoMetric with all fields to return non-nil metric")
 	}
 }
+
+func TestCreateCounterVec(t *testing.T) {
+	config := MetricsConfig{MetricPrefix: "myapp_"}
+	collector := NewMetricsCollectorWithConfig(config)
+
+	counter := collector.CreateCounterVec(
+		prometheus.CounterOpts{
+			Name: "requests",
+			Help: "Total requests",
+		},
+		[]string{"method", "status"},
+	)
+
+	if counter == nil {
+		t.Error("Expected counter to be created")
+	}
+
+	// Test that metric is registered with original name (internal tracking)
+	if !collector.IsRegistered("requests") {
+		t.Error("Expected counter to be registered with original name")
+	}
+
+	// Test counter functionality
+	counter.WithLabelValues("GET", "200").Inc()
+	counter.WithLabelValues("POST", "404").Add(5)
+}
+
+func TestCreateGaugeFunc(t *testing.T) {
+	config := MetricsConfig{MetricPrefix: "test_"}
+	collector := NewMetricsCollectorWithConfig(config)
+
+	value := 42.0
+	gauge := collector.CreateGaugeFunc(
+		prometheus.GaugeOpts{
+			Name: "temperature",
+			Help: "Current temperature",
+		},
+		func() float64 { return value },
+	)
+
+	if gauge == nil {
+		t.Error("Expected gauge to be created")
+	}
+
+	// Test that metric is registered with original name (internal tracking)
+	if !collector.IsRegistered("temperature") {
+		t.Error("Expected gauge to be registered with original name")
+	}
+}
+
+func TestMultipleCollectorsWithSameMetric(t *testing.T) {
+	// Test the shared source pattern with Func metrics
+	var sharedCounter int64 = 0
+
+	collector1 := NewMetricsCollector()
+	collector2 := NewMetricsCollector()
+
+	// Create identical metrics reading from the same source
+	counter1 := collector1.CreateCounterFunc(
+		prometheus.CounterOpts{Name: "shared_requests", Help: "Shared requests"},
+		func() float64 { return float64(sharedCounter) },
+	)
+
+	counter2 := collector2.CreateCounterFunc(
+		prometheus.CounterOpts{Name: "shared_requests", Help: "Shared requests"},
+		func() float64 { return float64(sharedCounter) },
+	)
+
+	if counter1 == nil || counter2 == nil {
+		t.Error("Expected both counters to be created successfully")
+	}
+
+	// Both should be registered in their respective collectors
+	if !collector1.IsRegistered("shared_requests") {
+		t.Error("Expected counter to be registered in collector1")
+	}
+	if !collector2.IsRegistered("shared_requests") {
+		t.Error("Expected counter to be registered in collector2")
+	}
+
+	// Modify shared source
+	sharedCounter = 100
+	// Both metrics will now report 100 when scraped
+}

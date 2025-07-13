@@ -68,26 +68,3 @@ func TestParseLogLevel(t *testing.T) {
 		}
 	}
 }
-
-func TestParseBool(t *testing.T) {
-	tests := []struct {
-		input    string
-		expected bool
-	}{
-		{"true", true},
-		{"TRUE", true},
-		{"t", true},
-		{"T", true},
-		{"false", false},
-		{"FALSE", false},
-		{"f", false},
-		{"anything", false},
-	}
-
-	for _, test := range tests {
-		result := parseBool(test.input)
-		if result != test.expected {
-			t.Errorf("parseBool(%s) = %v, expected %v", test.input, result, test.expected)
-		}
-	}
-}

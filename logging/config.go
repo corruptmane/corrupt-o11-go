@@ -5,6 +5,8 @@ import (
 	"log/slog"
 	"os"
 	"strings"
+
+	"github.com/corruptmane/corrupt-o11y-go/internal"
 )
 
 // LoggingConfig holds configuration for structured logging
@@ -18,8 +20,8 @@ type LoggingConfig struct {
 func FromEnv() LoggingConfig {
 	return LoggingConfig{
 		Level:   parseLogLevel(getEnvOrDefault("LOG_LEVEL", "INFO")),
-		AsJSON:  parseBool(getEnvOrDefault("LOG_AS_JSON", "false")),
-		Tracing: parseBool(getEnvOrDefault("LOG_TRACING", "false")),
+		AsJSON:  internal.MustEnvBool("LOG_AS_JSON", "false"),
+		Tracing: internal.MustEnvBool("LOG_TRACING", "false"),
 	}
 }
 
@@ -36,10 +38,6 @@ func parseLogLevel(level string) slog.Level {
 	default:
 		return slog.LevelInfo
 	}
-}
-
-func parseBool(value string) bool {
-	return strings.ToLower(value) == "true" || strings.ToLower(value) == "t"
 }
 
 func getEnvOrDefault(key, defaultValue string) string {
