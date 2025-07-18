@@ -4,6 +4,8 @@ package tracing
 import (
 	"fmt"
 	"os"
+
+	"github.com/corruptmane/corrupt-o11y-go/internal"
 )
 
 // ExportType represents the type of OpenTelemetry exporter
@@ -17,12 +19,15 @@ const (
 
 // TracingConfig holds configuration for OpenTelemetry tracing
 type TracingConfig struct {
+	IsEnabled  bool
 	ExportType ExportType
 	Endpoint   string
 }
 
 // FromEnv creates TracingConfig from environment variables
 func FromEnv() (TracingConfig, error) {
+	isEnabled := internal.MustEnvBool("TRACING_ENABLED", "true")
+
 	exportTypeStr := getEnvOrDefault("TRACING_EXPORTER_TYPE", "stdout")
 	exportType, err := parseExportType(exportTypeStr)
 	if err != nil {
@@ -30,6 +35,7 @@ func FromEnv() (TracingConfig, error) {
 	}
 
 	return TracingConfig{
+		IsEnabled:  isEnabled,
 		ExportType: exportType,
 		Endpoint:   getEnvOrDefault("TRACING_EXPORTER_ENDPOINT", ""),
 	}, nil

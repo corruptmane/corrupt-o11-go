@@ -14,12 +14,17 @@ import (
 	"go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
 	oteltrace "go.opentelemetry.io/otel/trace"
+	"go.opentelemetry.io/otel/trace/noop"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
 
 // ConfigureTracing configures OpenTelemetry tracing
-func ConfigureTracing(ctx context.Context, config TracingConfig, serviceName, serviceVersion string) (*trace.TracerProvider, error) {
+func ConfigureTracing(ctx context.Context, config TracingConfig, serviceName, serviceVersion string) (oteltrace.TracerProvider, error) {
+	if !config.IsEnabled {
+		return noop.NewTracerProvider(), nil
+	}
+
 	res, err := resource.New(ctx,
 		resource.WithAttributes(
 			semconv.ServiceNameKey.String(serviceName),
